@@ -13,7 +13,7 @@ class PositionalEncoding(nn.Module):
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
 
-        self.register_buffer("pe", pe.unsqueeze(0), persistent=False)  # (1, max_len, d_model)
+        self.register_buffer("pe", pe.unsqueeze(0), persistent=False)  
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x: (B, T, D)
@@ -22,11 +22,7 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class HybridTransformerAutoencoder(nn.Module):
-    """
-    Minimal Hybrid Transformer–Autoencoder for 1D time-series anomaly detection (MVP).
-    Input:  (B, T, 1)
-    Output: (B, T, 1) reconstructed sequence
-    """
+
     def __init__(
         self,
         d_model: int = 64,
@@ -51,7 +47,6 @@ class HybridTransformerAutoencoder(nn.Module):
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
 
-        # Autoencoder bottleneck on per-timestep embeddings
         self.to_latent = nn.Sequential(
             nn.Linear(d_model, bottleneck),
             nn.GELU(),
@@ -64,13 +59,13 @@ class HybridTransformerAutoencoder(nn.Module):
         self.output_proj = nn.Linear(d_model, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, T, 1)
-        h = self.input_proj(x)        # (B, T, D)
-        h = self.pos(h)               # add positional
-        h = self.encoder(h)           # transformer contextualization
 
-        z = self.to_latent(h)         # (B, T, bottleneck)
-        h2 = self.from_latent(z)      # (B, T, D)
+        h = self.input_proj(x)       
+        h = self.pos(h)               
+        h = self.encoder(h)          
 
-        y = self.output_proj(h2)      # (B, T, 1)
+        z = self.to_latent(h)         
+        h2 = self.from_latent(z)    
+
+        y = self.output_proj(h2)   
         return y
