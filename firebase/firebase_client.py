@@ -7,11 +7,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 def init_firestore() -> Optional[firestore.Client]:
-    """
-    Initializes Firestore using a service account.
-    Set env var: FIREBASE_SERVICE_ACCOUNT_JSON=/path/to/serviceAccount.json
-    Returns None if not configured (app runs without persistence).
-    """
+
     path = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON", "").strip()
     if not path:
         return None
@@ -41,7 +37,6 @@ def save_run(
         "overallRisk": overall_risk,
         "anomalyCount": int(anomaly_count),
         "maxScore": float(max_score),
-        # store compact arrays for demo; for large data, store only summary or chunk it
         "series": series,
         "modelVersion": "hybrid-tae-mvp-v1",
     }
