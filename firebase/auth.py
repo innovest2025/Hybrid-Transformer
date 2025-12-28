@@ -4,14 +4,6 @@ import requests
 from typing import Dict, Any
 
 def sign_in_email_password(email: str, password: str) -> Dict[str, Any]:
-    """
-    Firebase Email/Password sign-in via Identity Toolkit REST API.
-    Requires env var: FIREBASE_API_KEY
-
-    Returns dict containing at least:
-      - localId (uid)
-      - idToken
-    """
     api_key = os.environ.get("FIREBASE_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("FIREBASE_API_KEY not set. Run in Demo mode or set API key.")
