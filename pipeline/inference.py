@@ -45,15 +45,12 @@ def reconstruction_error_scores(
         for (xb,) in dl:
             xb = xb.to(device)
             recon = model(xb)
-            # per-window error (mean over time)
             e = torch.mean((recon - xb) ** 2, dim=(1, 2))
             errs.append(e.detach().cpu().numpy())
     return np.concatenate(errs, axis=0)
 
 def expand_window_scores_to_timeline(window_scores: np.ndarray, T: int, window: int) -> np.ndarray:
-    """
-    Convert per-window scores to per-timestep score by averaging overlapping windows.
-    """
+
     timeline = np.zeros(T, dtype="float32")
     counts = np.zeros(T, dtype="float32")
     for i, s in enumerate(window_scores):
@@ -68,16 +65,11 @@ def pick_threshold(train_window_scores: np.ndarray, percentile: float = 95.0) ->
     return float(np.percentile(train_window_scores, percentile))
 
 def risk_label(anomaly_mask: np.ndarray) -> str:
-    """
-    Simple hackathon-friendly risk rule:
-    - Low: < 3 anomaly points
-    - Medium: >=3 but not sustained
-    - High: sustained anomalies (>= 5 consecutive points)
-    """
+
     cnt = int(np.sum(anomaly_mask))
     if cnt < 3:
         return "Low"
-    # sustained run length
+
     run = 0
     max_run = 0
     for v in anomaly_mask.astype(int):
