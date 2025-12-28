@@ -1,0 +1,7 @@
+streamlit==1.37.1
+torch==2.3.1
+pandas==2.2.2
+numpy==2.0.1
+matplotlib==3.9.2
+requests==2.32.3
+firebase-admin==6.5.0
