@@ -1,0 +1,76 @@
+import math
+import torch
+import torch.nn as nn
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 4096):
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float32).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2, dtype=torch.float32) * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+
+        self.register_buffer("pe", pe.unsqueeze(0), persistent=False)  # (1, max_len, d_model)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, T, D)
+        T = x.size(1)
+        x = x + self.pe[:, :T, :]
+        return self.dropout(x)
+
+class HybridTransformerAutoencoder(nn.Module):
+    """
+    Minimal Hybrid Transformer–Autoencoder for 1D time-series anomaly detection (MVP).
+    Input:  (B, T, 1)
+    Output: (B, T, 1) reconstructed sequence
+    """
+    def __init__(
+        self,
+        d_model: int = 64,
+        nhead: int = 4,
+        num_layers: int = 2,
+        dim_feedforward: int = 128,
+        bottleneck: int = 16,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.input_proj = nn.Linear(1, d_model)
+        self.pos = PositionalEncoding(d_model, dropout=dropout)
+
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout,
+            batch_first=True,
+            activation="gelu",
+            norm_first=True,
+        )
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+
+        # Autoencoder bottleneck on per-timestep embeddings
+        self.to_latent = nn.Sequential(
+            nn.Linear(d_model, bottleneck),
+            nn.GELU(),
+        )
+        self.from_latent = nn.Sequential(
+            nn.Linear(bottleneck, d_model),
+            nn.GELU(),
+        )
+
+        self.output_proj = nn.Linear(d_model, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, T, 1)
+        h = self.input_proj(x)        # (B, T, D)
+        h = self.pos(h)               # add positional
+        h = self.encoder(h)           # transformer contextualization
+
+        z = self.to_latent(h)         # (B, T, bottleneck)
+        h2 = self.from_latent(z)      # (B, T, D)
+
+        y = self.output_proj(h2)      # (B, T, 1)
+        return y
