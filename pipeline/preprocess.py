@@ -7,7 +7,6 @@ def load_timeseries_csv(file_bytes: bytes) -> pd.DataFrame:
     if "value" not in df.columns:
         raise ValueError("CSV must contain a 'value' column.")
     if "timestamp" not in df.columns:
-        # allow index-based sequence
         df = df.copy()
         df["timestamp"] = np.arange(len(df))
     return df[["timestamp", "value"]].copy()
@@ -27,5 +26,5 @@ def window_sequence(values: np.ndarray, window: int) -> np.ndarray:
     X = []
     for i in range(0, len(values) - window + 1):
         X.append(values[i:i+window])
-    X = np.stack(X, axis=0).astype("float32")  # (N, window)
-    return X[..., None]  # (N, window, 1)
+    X = np.stack(X, axis=0).astype("float32")  
+    return X[..., None] 
