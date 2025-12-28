@@ -25,7 +25,7 @@ except Exception:
 
 st.set_page_config(page_title="Crop Stress Early Warning (Hybrid T-AE)", layout="wide")
 
-# ---------- Helpers ----------
+
 def plot_series_and_anomalies(ts, values, scores, threshold, anomaly_mask):
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -44,14 +44,12 @@ def plot_series_and_anomalies(ts, values, scores, threshold, anomaly_mask):
 def get_device():
     return "cuda" if torch.cuda.is_available() else "cpu"
 
-# ---------- Session ----------
 if "user" not in st.session_state:
     st.session_state.user = {"uid": "demo_user", "email": "demo@local", "mode": "demo"}
 
 if "db_enabled" not in st.session_state:
     st.session_state.db_enabled = False
 
-# ---------- Sidebar: Auth ----------
 st.sidebar.title("Login")
 api_key_set = bool(os.environ.get("FIREBASE_API_KEY", "").strip())
 if api_key_set and sign_in_email_password is not None:
@@ -72,7 +70,6 @@ if st.sidebar.button("Use Demo User"):
 
 st.sidebar.divider()
 
-# ---------- Firebase Firestore init ----------
 db = init_firestore()
 st.session_state.db_enabled = db is not None
 if st.session_state.db_enabled:
@@ -83,13 +80,11 @@ else:
 st.sidebar.divider()
 st.sidebar.caption(f"Device: {get_device()}")
 
-# ---------- Main UI ----------
 st.title("Hybrid Transformer–Autoencoder: Crop Stress & Yield Anomaly Prototype")
 st.caption(f"User: {st.session_state.user['email']}  |  Mode: {st.session_state.user['mode']}")
 
 tabs = st.tabs(["Run Analysis", "History (Firestore)", "Alerts (Firestore)", "About"])
 
-# ---------- Tab 1: Run Analysis ----------
 with tabs[0]:
     st.subheader("1) Choose Data")
     colA, colB = st.columns([2, 1])
@@ -151,8 +146,6 @@ with tabs[0]:
                 train_scores_w = reconstruction_error_scores(model, X_train, device=device)
                 all_scores_w = reconstruction_error_scores(model, X_all, device=device)
                 th = pick_threshold(train_scores_w, percentile=float(percentile))
-
-                # Expand window scores to per-timestep length
                 T = len(values_norm)
                 scores_t = expand_window_scores_to_timeline(all_scores_w, T=T, window=int(window))
                 anomaly_mask = scores_t > th
@@ -166,11 +159,9 @@ with tabs[0]:
             st.subheader("4) Visualization")
             plot_series_and_anomalies(ts, values_norm, scores_t, th, anomaly_mask)
 
-            # Save to Firestore (if enabled)
             if db is not None:
                 with st.spinner("Saving run to Firestore..."):
                     uid = st.session_state.user["uid"]
-                    # store compact series arrays (cap length for demo)
                     cap = min(len(values_norm), 800)
                     series = {
                         "timestamp": ts[:cap],
@@ -193,7 +184,6 @@ with tabs[0]:
             else:
                 st.info("Firestore not configured, so this run wasn't saved.")
 
-# ---------- Tab 2: History ----------
 with tabs[1]:
     st.subheader("Run History")
     if db is None:
@@ -204,7 +194,6 @@ with tabs[1]:
         if not runs:
             st.info("No runs yet. Run an analysis first.")
         else:
-            # show summary table
             rows = []
             for r in runs:
                 rows.append({
@@ -218,7 +207,6 @@ with tabs[1]:
                 })
             st.dataframe(pd.DataFrame(rows), use_container_width=True)
 
-# ---------- Tab 3: Alerts ----------
 with tabs[2]:
     st.subheader("Alerts")
     if db is None:
@@ -234,7 +222,6 @@ with tabs[2]:
                 st.caption(f"Run: {a.get('runId')}  |  Created: {a.get('createdAt')}  |  Status: {a.get('status')}")
                 st.divider()
 
-# ---------- Tab 4: About ----------
 with tabs[3]:
     st.markdown("""
 **What this prototype demonstrates (hackathon-ready):**
